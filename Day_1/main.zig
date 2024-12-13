@@ -10,5 +10,11 @@ pub fn main() !void {
 
     const buffer = try std.fs.cwd().readFileAlloc(allocator, file_name, file_length);
     std.debug.print("file size is {d}\n", .{buffer.len});
-    std.debug.print("{s}", .{buffer});
+    std.debug.print("{s}\n", .{buffer});
+
+    for (buffer) |elem| {
+        if (elem == "/t" or elem == "/n" or elem == " ") {
+            std.debug.print("{c}\n", .{elem});
+        }
+    }
 }
