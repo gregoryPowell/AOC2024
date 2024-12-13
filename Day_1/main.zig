@@ -12,9 +12,13 @@ pub fn main() !void {
     std.debug.print("file size is {d}\n", .{buffer.len});
     std.debug.print("{s}\n", .{buffer});
 
-    for (buffer) |elem| {
-        if (elem == "/t" or elem == "/n" or elem == " ") {
-            std.debug.print("{c}\n", .{elem});
-        }
+    var splits = std.mem.splitSequence(u8, buffer, "\n");
+    var original_rows = std.ArrayList(u8).init(allocator);
+    defer original_rows.deinit();
+    var j: u32 = 0;
+    while (splits.next()) |line| {
+        std.debug.print("line is {s}\n", .{line});
+        try original_rows.appendSlice(line);
+        j += 1;
     }
 }
