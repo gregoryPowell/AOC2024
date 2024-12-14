@@ -23,6 +23,8 @@ pub fn main() !void {
             try parsed_buffer.append(num);
         }
 
+        std.debug.print("{d} --> ", .{parsed_buffer.items});
+
         if (try test_level(allocator, parsed_buffer.items)) {
             safe_levels += 1;
         }
@@ -71,38 +73,86 @@ fn parse_data_by_line(
 }
 
 fn test_level(allocator: std.mem.Allocator, data: []i32) !bool {
-    // get sorted version of the levels for comparing
-    const sorted_asc = try allocator.alloc(i32, data.len);
-    defer allocator.free(sorted_asc);
-    const sorted_desc = try allocator.alloc(i32, data.len);
-    defer allocator.free(sorted_desc);
-    @memcpy(sorted_asc, data);
-    @memcpy(sorted_desc, data);
-    std.mem.sort(i32, sorted_asc, {}, comptime std.sort.asc(i32));
-    std.mem.sort(i32, sorted_desc, {}, comptime std.sort.desc(i32));
+    var past_val: i32 = undefined;
+    var diffed_vals = std.ArrayList(i32).init(allocator);
 
-    // check if level is either all increasing or decreasing
-    if (std.mem.eql(i32, data, sorted_asc) or std.mem.eql(i32, data, sorted_desc)) {
-        var past_val: i32 = undefined;
-
-        // step through each value on a level
-        for (data, 0..) |value, i| {
-            // if we have an old value to compare to begin tests
-            if (i != 0) {
-                // if differnce in values are >3 or 0 then fail level
-                if (@abs(value - past_val) > 3 or value == past_val) {
-                    std.debug.print("{d} differnce out of bounds\n", .{data});
-                    return false;
-                }
-            }
-
-            past_val = value;
+    for (data, 0..) |value, i| {
+        if (i != 0) {
+            try diffed_vals.append(value - past_val);
         }
-    } else {
-        std.debug.print("{d} Failed sorting\n", .{data});
-        return false;
+        past_val = value;
     }
 
-    std.debug.print("{d} Passed!!!\n", .{data});
+    std.debug.print("{d} --> ", .{diffed_vals.items});
+
+    if (sameSign(diffed_vals.items)) {
+        return withinBounds(diffed_vals.items);
+    } else {
+        for (diffed_vals.items, 0..) |diffed_value, i| {
+            if (diffed_vals.items[0] >= 0) {
+                std.debug.print("was initally positive --> ", .{});
+                if (diffed_value < 0) {
+                    std.debug.print("then had a negative --> ", .{});
+                    if (diffed_value + diffed_vals.items[i - 1] > 0) {
+                        std.debug.print("adding 1 below made it positive -->", .{});
+                        return withinBounds(diffed_vals.items);
+                    } else if (diffed_value + diffed_vals.items[i + 1] > 0) {
+                        std.debug.print("adding 1 above made it positive -->", .{});
+                        return withinBounds(diffed_vals.items);
+                    } else {
+                        std.debug.print("was not fixable\n", .{});
+                        return false;
+                    }
+                }
+            } else if (diffed_vals.items[0] < 0) {
+                std.debug.print("was initally negative --> ", .{});
+                if (diffed_value >= 0) {
+                    std.debug.print("then had a positive --> ", .{});
+                    if (diffed_value + diffed_vals.items[i - 1] < 0) {
+                        std.debug.print("adding 1 below made it negative -->", .{});
+                        return withinBounds(diffed_vals.items);
+                    } else if (diffed_value + diffed_vals.items[i + 1] < 0) {
+                        std.debug.print("adding 1 above made it negative -->", .{});
+                        return withinBounds(diffed_vals.items);
+                    } else {
+                        std.debug.print("was not fixable\n", .{});
+                        return false;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+}
+
+fn sameSign(arr: []i32) bool {
+    const first_sign: i16 = if (arr[0] > 0) 1 else if (arr[0] < 0) -1 else 0;
+
+    for (arr) |el| {
+        const el_sign: i16 = if (el > 0) 1 else if (el < 0) -1 else 0;
+        if (el_sign != first_sign) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+fn withinBounds(data: []i32) bool {
+    for (data, 0..) |elem, i| {
+        if (@abs(elem) > 3 or elem == 0) {
+            if (@abs(elem + data[i - 1]) <= 3 and @abs(elem + data[i - 1]) >= 1) {
+                std.debug.print("was fixed by adding 1 below\n", .{});
+                return true;
+            } else if (@abs(elem + data[i + 1]) <= 3 and @abs(elem + data[i + 1]) >= 1) {
+                std.debug.print("was fixed by adding 1 above\n", .{});
+                return true;
+            } else {
+                std.debug.print("was not fixable\n", .{});
+                return false;
+            }
+        }
+    }
+    std.debug.print("was already good!!!\n", .{});
     return true;
 }
