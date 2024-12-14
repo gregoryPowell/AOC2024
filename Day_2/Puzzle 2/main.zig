@@ -2,7 +2,7 @@ const std = @import("std");
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
-    const file_name = "input.txt";
+    const file_name = "test_input.txt";
     var safe_levels: i64 = 0;
 
     // Read file
@@ -14,53 +14,16 @@ pub fn main() !void {
     // take the parsed lines then parse them further
     for (parsed_data) |levels| {
         const parsed_level = try parse_data(allocator, levels);
-        var temp_buffer = std.ArrayList(i32).init(allocator);
-        defer temp_buffer.deinit();
+        var parsed_buffer = std.ArrayList(i32).init(allocator);
+        defer parsed_buffer.deinit();
 
         // iterate over each level and pull out values
         for (parsed_level) |value| {
             const num = try std.fmt.parseInt(i32, value, 10);
-            try temp_buffer.append(num);
+            try parsed_buffer.append(num);
         }
 
-        // get sorted version of the levels for comparing
-        const sorted_asc = try allocator.alloc(i32, temp_buffer.items.len);
-        defer allocator.free(sorted_asc);
-        const sorted_desc = try allocator.alloc(i32, temp_buffer.items.len);
-        defer allocator.free(sorted_desc);
-        @memcpy(sorted_asc, temp_buffer.items);
-        @memcpy(sorted_desc, temp_buffer.items);
-        std.mem.sort(i32, sorted_asc, {}, comptime std.sort.asc(i32));
-        std.mem.sort(i32, sorted_desc, {}, comptime std.sort.desc(i32));
-
-        var test_flag: bool = true; // flag to validate if good level or not
-
-        // check if level is either all increasing or decreasing
-        if (std.mem.eql(i32, temp_buffer.items, sorted_asc) or std.mem.eql(i32, temp_buffer.items, sorted_desc)) {
-            var past_val: i32 = undefined;
-
-            // step through each value on a level
-            for (temp_buffer.items, 0..) |value, i| {
-                // if we have an old value to compare to begin tests
-                if (i != 0) {
-                    // if differnce in values are >3 or 0 then fail level
-                    if (@abs(value - past_val) > 3 or value == past_val) {
-                        std.debug.print("{d} differnce out of bounds\n", .{temp_buffer.items});
-                        test_flag = false;
-                        break;
-                    }
-                }
-
-                past_val = value;
-            }
-        } else {
-            std.debug.print("{d} Failed sorting\n", .{temp_buffer.items});
-            test_flag = false;
-        }
-
-        // if not fail conditions have been found incrment the safe level count
-        if (test_flag) {
-            std.debug.print("{d} Passed!!!\n", .{temp_buffer.items});
+        if (try test_level(allocator, parsed_buffer.items)) {
             safe_levels += 1;
         }
     }
@@ -105,4 +68,41 @@ fn parse_data_by_line(
     }
 
     return parsed_lvl.items;
+}
+
+fn test_level(allocator: std.mem.Allocator, data: []i32) !bool {
+    // get sorted version of the levels for comparing
+    const sorted_asc = try allocator.alloc(i32, data.len);
+    defer allocator.free(sorted_asc);
+    const sorted_desc = try allocator.alloc(i32, data.len);
+    defer allocator.free(sorted_desc);
+    @memcpy(sorted_asc, data);
+    @memcpy(sorted_desc, data);
+    std.mem.sort(i32, sorted_asc, {}, comptime std.sort.asc(i32));
+    std.mem.sort(i32, sorted_desc, {}, comptime std.sort.desc(i32));
+
+    // check if level is either all increasing or decreasing
+    if (std.mem.eql(i32, data, sorted_asc) or std.mem.eql(i32, data, sorted_desc)) {
+        var past_val: i32 = undefined;
+
+        // step through each value on a level
+        for (data, 0..) |value, i| {
+            // if we have an old value to compare to begin tests
+            if (i != 0) {
+                // if differnce in values are >3 or 0 then fail level
+                if (@abs(value - past_val) > 3 or value == past_val) {
+                    std.debug.print("{d} differnce out of bounds\n", .{data});
+                    return false;
+                }
+            }
+
+            past_val = value;
+        }
+    } else {
+        std.debug.print("{d} Failed sorting\n", .{data});
+        return false;
+    }
+
+    std.debug.print("{d} Passed!!!\n", .{data});
+    return true;
 }
