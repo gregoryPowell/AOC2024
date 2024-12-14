@@ -2,7 +2,7 @@ const std = @import("std");
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
-    const file_name = "test_input.txt";
+    const file_name = "input.txt";
     var safe_levels: i64 = 0;
 
     // Read file
@@ -23,10 +23,14 @@ pub fn main() !void {
             try parsed_buffer.append(num);
         }
 
-        std.debug.print("{d} --> ", .{parsed_buffer.items});
+        std.debug.print("{d} : ", .{parsed_buffer.items});
 
+        // run level tests and increment counter if safe level
         if (try test_level(allocator, parsed_buffer.items)) {
+            std.debug.print("Safe Level!!!\n", .{});
             safe_levels += 1;
+        } else {
+            std.debug.print("Level failed :(\n", .{});
         }
     }
 
@@ -34,6 +38,7 @@ pub fn main() !void {
     std.debug.print("result is {d}\n", .{safe_levels});
 }
 
+// get content from file
 fn read_file(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {
     var file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
@@ -42,6 +47,7 @@ fn read_file(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {
     return content;
 }
 
+// parse data by white space
 fn parse_data(
     allocator: std.mem.Allocator,
     input_buf: []const u8,
@@ -57,6 +63,7 @@ fn parse_data(
     return parsed_buf.items;
 }
 
+// parse data by line
 fn parse_data_by_line(
     allocator: std.mem.Allocator,
     input_buf: []const u8,
@@ -72,6 +79,7 @@ fn parse_data_by_line(
     return parsed_lvl.items;
 }
 
+// test an entire level to decide if its safe or not
 fn test_level(allocator: std.mem.Allocator, data: []i32) !bool {
     var past_val: i32 = undefined;
     var diffed_vals = std.ArrayList(i32).init(allocator);
@@ -83,76 +91,67 @@ fn test_level(allocator: std.mem.Allocator, data: []i32) !bool {
         past_val = value;
     }
 
-    std.debug.print("{d} --> ", .{diffed_vals.items});
-
-    if (sameSign(diffed_vals.items)) {
-        return withinBounds(diffed_vals.items);
-    } else {
-        for (diffed_vals.items, 0..) |diffed_value, i| {
-            if (diffed_vals.items[0] >= 0) {
-                std.debug.print("was initally positive --> ", .{});
-                if (diffed_value < 0) {
-                    std.debug.print("then had a negative --> ", .{});
-                    if (diffed_value + diffed_vals.items[i - 1] > 0) {
-                        std.debug.print("adding 1 below made it positive -->", .{});
-                        return withinBounds(diffed_vals.items);
-                    } else if (diffed_value + diffed_vals.items[i + 1] > 0) {
-                        std.debug.print("adding 1 above made it positive -->", .{});
-                        return withinBounds(diffed_vals.items);
-                    } else {
-                        std.debug.print("was not fixable\n", .{});
-                        return false;
-                    }
-                }
-            } else if (diffed_vals.items[0] < 0) {
-                std.debug.print("was initally negative --> ", .{});
-                if (diffed_value >= 0) {
-                    std.debug.print("then had a positive --> ", .{});
-                    if (diffed_value + diffed_vals.items[i - 1] < 0) {
-                        std.debug.print("adding 1 below made it negative -->", .{});
-                        return withinBounds(diffed_vals.items);
-                    } else if (diffed_value + diffed_vals.items[i + 1] < 0) {
-                        std.debug.print("adding 1 above made it negative -->", .{});
-                        return withinBounds(diffed_vals.items);
-                    } else {
-                        std.debug.print("was not fixable\n", .{});
-                        return false;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-}
-
-fn sameSign(arr: []i32) bool {
-    const first_sign: i16 = if (arr[0] > 0) 1 else if (arr[0] < 0) -1 else 0;
-
-    for (arr) |el| {
-        const el_sign: i16 = if (el > 0) 1 else if (el < 0) -1 else 0;
-        if (el_sign != first_sign) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-fn withinBounds(data: []i32) bool {
-    for (data, 0..) |elem, i| {
-        if (@abs(elem) > 3 or elem == 0) {
-            if (@abs(elem + data[i - 1]) <= 3 and @abs(elem + data[i - 1]) >= 1) {
-                std.debug.print("was fixed by adding 1 below\n", .{});
-                return true;
-            } else if (@abs(elem + data[i + 1]) <= 3 and @abs(elem + data[i + 1]) >= 1) {
-                std.debug.print("was fixed by adding 1 above\n", .{});
-                return true;
-            } else {
-                std.debug.print("was not fixable\n", .{});
-                return false;
+    var safe: bool = true;
+    const check: i16 = @intCast(try is_safe(diffed_vals.items));
+    if (check > -1) {
+        if ((check <= 1 and try is_safe(diffed_vals.items[1..]) < 0) or ((check == diffed_vals.items.len - 1) and (try is_safe(diffed_vals.items[0 .. diffed_vals.items.len - 1])) < 0)) {
+            safe = true;
+        } else if ((check == 0) or (try add_and_check(allocator, diffed_vals.items, check, -1) > -1)) {
+            if (check == diffed_vals.items.len - 1) {
+                safe = false;
+            } else if (try add_and_check(allocator, diffed_vals.items, check, 1) > -1) {
+                safe = false;
             }
         }
     }
-    std.debug.print("was already good!!!\n", .{});
-    return true;
+    return safe;
+}
+
+fn is_safe(diff_array: []i32) !i32 {
+    var prev_diff: i32 = 0;
+    for (diff_array, 0..) |diff, i| {
+        const abs_diff = @abs(diff);
+        if (abs_diff < 1 or abs_diff > 3) { // diff out of bounds
+            std.debug.print("issue at index {d} : ", .{i});
+            return @intCast(i);
+        }
+        if (prev_diff == 0) { // init first location
+            prev_diff = diff_array[i];
+        }
+        if ((prev_diff > 0 and diff_array[i] < 0) or (prev_diff < 0 and diff_array[i] > 0)) { // if signs are swapped or 0 fail
+            std.debug.print("issue at index {d} : ", .{i});
+            return @intCast(i);
+        }
+    }
+    std.debug.print("safty score nothing found : ", .{});
+    return -1;
+}
+
+// combine one issue location to see if it fixes the issue.  Essentially the same as removing a number
+fn add_and_check(allocator: std.mem.Allocator, diff_array: []i32, check_index: i16, side: i16) !i32 {
+    var a: i16 = undefined;
+    var b: i16 = undefined;
+    if (side == -1) { // add to the left of problem location
+        a = check_index;
+        b = check_index - 1;
+    } else { // add to the right of problem location
+        a = check_index + 1;
+        b = check_index;
+    }
+
+    if (diff_array.len == 0) {
+        return error.InvalidArraySize; // Handle empty array case (unlikely)
+    }
+
+    var new_list = try allocator.alloc(i32, diff_array.len);
+    defer allocator.free(new_list);
+    @memcpy(new_list, diff_array);
+    const new_val: i32 = diff_array[@intCast(a)] + diff_array[@intCast(b)];
+    for (@intCast(a)..new_list.len - 1) |i| {
+        new_list[i] = new_list[i + 1];
+    }
+    new_list[@intCast(b)] = new_val;
+    new_list = try allocator.realloc(new_list, new_list.len - 1);
+
+    return try is_safe(new_list);
 }
