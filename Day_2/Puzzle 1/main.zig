@@ -2,7 +2,7 @@ const std = @import("std");
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
-    const file_name = "test_input.txt";
+    const file_name = "input.txt";
     var safe_levels: i64 = 0;
 
     // Read file
@@ -40,9 +40,9 @@ pub fn main() !void {
             var past_val: i32 = undefined;
 
             // step through each value on a level
-            for (temp_buffer.items) |value| {
+            for (temp_buffer.items, 0..) |value, i| {
                 // if we have an old value to compare to begin tests
-                if (value != temp_buffer.items[0]) {
+                if (i != 0) {
                     // if differnce in values are >3 or 0 then fail level
                     if (@abs(value - past_val) > 3 or value == past_val) {
                         std.debug.print("{d} differnce out of bounds\n", .{temp_buffer.items});
