@@ -84,14 +84,14 @@ fn chuck_check(chunk: []const u8, delimiter: []const u8) !i64 {
 
 fn chunk_contains_do(chunk: []const u8) i32 {
     if (std.mem.containsAtLeast(u8, chunk, 1, "do()")) {
-        const value = std.mem.indexOf(u8, chunk, "do()").?;
+        const value = std.mem.lastIndexOf(u8, chunk, "do()").?;
         return @intCast(value);
     } else return -1;
 }
 
 fn chunk_contains_dont(chunk: []const u8) i32 {
     if (std.mem.containsAtLeast(u8, chunk, 1, "don't()")) {
-        const value = std.mem.indexOf(u8, chunk, "don't()").?;
+        const value = std.mem.lastIndexOf(u8, chunk, "don't()").?;
         return @intCast(value);
     } else return -1;
 }
