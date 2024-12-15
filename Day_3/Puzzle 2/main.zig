@@ -4,34 +4,29 @@ pub const Error = error{failed};
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
-    const file_name = "test_input.txt";
+    const file_name = "input.txt";
     var answer: i64 = 0;
-    var valid_answer: bool = true;
+    var cleaning_buffer = true;
 
     // Read file
-    const content = try read_file(allocator, file_name);
-    std.debug.print("File read in is as follows: \n{s}\n", .{content});
+    var content = try read_file(allocator, file_name);
+
+    while (cleaning_buffer) {
+        if (std.mem.eql(u8, content, remove_trash(allocator, content))) {
+            cleaning_buffer = false;
+        } else {
+            content = remove_trash(allocator, content);
+            std.debug.print("cleaning the buffer\n", .{});
+        }
+    }
 
     var data = std.mem.tokenizeSequence(u8, content, "mul(");
 
     while (data.peek() != null) {
         const data_chunck = data.next().?;
-        std.debug.print("next value is: {s}\n", .{data_chunck});
-
-        if (valid_answer) {
-            answer += chuck_check(data_chunck, ",") catch {
-                std.debug.print("error detected\n", .{});
-                continue;
-            };
-        }
-
-        if (chunk_contains_do(data_chunck) > chunk_contains_dont(data_chunck)) {
-            std.debug.print("chunk has a do later than don't so is good\n", .{});
-            valid_answer = true;
-        } else if (chunk_contains_dont(data_chunck) > chunk_contains_do(data_chunck)) {
-            std.debug.print("chunk has a don't later than do so is bad\n", .{});
-            valid_answer = false;
-        }
+        answer += chuck_check(data_chunck, ",") catch {
+            continue;
+        };
     }
 
     std.debug.print("next result is: {d}\n", .{answer});
@@ -82,16 +77,34 @@ fn chuck_check(chunk: []const u8, delimiter: []const u8) !i64 {
     return error.failed;
 }
 
-fn chunk_contains_do(chunk: []const u8) i32 {
-    if (std.mem.containsAtLeast(u8, chunk, 1, "do()")) {
-        const value = std.mem.lastIndexOf(u8, chunk, "do()").?;
-        return @intCast(value);
-    } else return -1;
-}
+fn remove_trash(allocator: std.mem.Allocator, chunk: []const u8) []const u8 {
+    const index = std.mem.indexOf(u8, chunk, "don't()");
 
-fn chunk_contains_dont(chunk: []const u8) i32 {
-    if (std.mem.containsAtLeast(u8, chunk, 1, "don't()")) {
-        const value = std.mem.lastIndexOf(u8, chunk, "don't()").?;
-        return @intCast(value);
-    } else return -1;
+    if (index == null) {
+        return chunk;
+    } else {
+        const clean_index = index.?;
+        const end_index = std.mem.indexOf(u8, chunk[clean_index..], "do()");
+
+        if (end_index == null) {
+            return "";
+        } else {
+            const clean_end_index = end_index.? + clean_index;
+            var list = std.ArrayList(u8).init(allocator);
+            defer list.deinit();
+
+            list.appendSlice(chunk[0..clean_index]) catch {
+                std.debug.print("there has been a mistake\n", .{});
+            };
+            list.appendSlice(chunk[clean_end_index..]) catch {
+                std.debug.print("there has been a mistake\n", .{});
+            };
+
+            const items = list.toOwnedSlice() catch {
+                std.debug.print("there has been a mistake\n", .{});
+                return "";
+            };
+            return items;
+        }
+    }
 }
