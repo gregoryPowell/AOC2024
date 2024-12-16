@@ -2,7 +2,7 @@ const std = @import("std");
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
-    const file_name = "test2_input.txt";
+    const file_name = "input.txt";
     var answer: u32 = 0;
 
     const content = try read_file(allocator, file_name);
@@ -19,17 +19,15 @@ pub fn main() !void {
                 const x: i32 = @intCast(x_index);
                 const y: i32 = @intCast(y_index);
                 std.debug.print("A found at ({d}, {d})\n", .{ x_index, y_index });
-                if (x - 1 >= 0 and x + 1 < line.len and y - 1 >= 0 or y + 1 < grid.len) {
-                    if (check_cross(grid, x_index, y_index)) {
-                        answer += 1;
-                        std.debug.print("found a cross at ({d}, {d})\n", .{ x_index, y_index });
-                    }
+                if (x - 1 >= 0 and x + 1 < line.len and y - 1 >= 0 and y + 1 < grid.len) {
+                    // if (check_cross(grid, x_index, y_index)) {
+                    //     answer += 1;
+                    //     std.debug.print("found a cross at ({d}, {d})\n", .{ x_index, y_index });
+                    // }
                     if (check_diagnol(grid, x_index, y_index)) {
                         answer += 1;
                         std.debug.print("found a diagonol at ({d}, {d})\n", .{ x_index, y_index });
                     }
-                } else {
-                    std.debug.print("A is out of bounds\n", .{});
                 }
             }
         }
@@ -59,28 +57,34 @@ fn read_line(allocator: std.mem.Allocator, content: []const u8) ![][]const u8 {
     return lines.toOwnedSlice();
 }
 
-// check diagnol
+// All cases:
+// M.M...S.M...S.S...M.S
+// .A.....A.....A.....A.
+// S.S...S.M...M.M...M.S
 fn check_diagnol(data: [][]const u8, x: usize, y: usize) bool {
-    if ((data[y - 1][x - 1] == 'M' and data[y + 1][x - 1] == 'M') and (data[y + 1][x + 1] == 'S' and data[y - 1][x + 1] == 'S')) { // M left S right
+    if ((data[y - 1][x - 1] == 'M' and data[y - 1][x + 1] == 'M') and (data[y + 1][x + 1] == 'S' and data[y + 1][x - 1] == 'S')) { // case 1
         return true;
-    } else if ((data[y - 1][x - 1] == 'S' and data[y + 1][x - 1] == 'S') and (data[y + 1][x + 1] == 'M' and data[y - 1][x + 1] == 'M')) { // M right S left
+    } else if ((data[y - 1][x - 1] == 'S' and data[y - 1][x + 1] == 'M') and (data[y + 1][x + 1] == 'M' and data[y + 1][x - 1] == 'S')) { // case 2
         return true;
-    } else if ((data[y - 1][x - 1] == 'M' and data[y - 1][x + 1] == 'M') and (data[y + 1][x + 1] == 'S' and data[y + 1][x - 1] == 'S')) { // M up S down
+    } else if ((data[y - 1][x - 1] == 'S' and data[y - 1][x + 1] == 'S') and (data[y + 1][x + 1] == 'M' and data[y + 1][x - 1] == 'M')) { // case 3
         return true;
-    } else if ((data[y - 1][x - 1] == 'S' and data[y - 1][x + 1] == 'S') and (data[y + 1][x + 1] == 'M' and data[y + 1][x - 1] == 'M')) { // M down S up
+    } else if ((data[y - 1][x - 1] == 'M' and data[y - 1][x + 1] == 'S') and (data[y + 1][x + 1] == 'S' and data[y + 1][x - 1] == 'M')) { // case 4
         return true;
     } else return false;
 }
 
-// check cross
+// All cases:
+// .M.....M.....S.....S.
+// MAS...SAM...SAM...MAS
+// .S.....S.....M.....M.
 fn check_cross(data: [][]const u8, x: usize, y: usize) bool {
-    if ((data[y - 1][x] == 'M' and data[y][x - 1] == 'M') and (data[y + 1][x] == 'S' and data[y][x + 1] == 'S')) { // M left and up S right and down
+    if ((data[y - 1][x] == 'M' and data[y][x + 1] == 'S') and (data[y + 1][x] == 'S' and data[y][x - 1] == 'M')) { // case 1
         return true;
-    } else if ((data[y - 1][x] == 'M' and data[y][x + 1] == 'M') and (data[y + 1][x] == 'S' and data[y][x - 1] == 'S')) { // M up and right S down and left
+    } else if ((data[y - 1][x] == 'M' and data[y][x + 1] == 'M') and (data[y + 1][x] == 'S' and data[y][x - 1] == 'S')) { // case 2
         return true;
-    } else if ((data[y][x + 1] == 'M' and data[y + 1][x] == 'M') and (data[y][x - 1] == 'S' and data[y - 1][x] == 'S')) { // M right and down S left and up
+    } else if ((data[y - 1][x] == 'S' and data[y][x + 1] == 'M') and (data[y + 1][x] == 'M' and data[y][x - 1] == 'S')) { // case 3
         return true;
-    } else if ((data[y + 1][x] == 'M' and data[y][x - 1] == 'M') and (data[y - 1][x] == 'S' and data[y][x + 1] == 'S')) { // M down and left S up and right
+    } else if ((data[y - 1][x] == 'S' and data[y][x + 1] == 'S') and (data[y + 1][x] == 'M' and data[y][x - 1] == 'M')) { // case 2
         return true;
     } else return false;
 }
