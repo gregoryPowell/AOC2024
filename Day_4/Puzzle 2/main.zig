@@ -2,7 +2,7 @@ const std = @import("std");
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
-    const file_name = "input.txt";
+    const file_name = "test2_input.txt";
     var answer: u32 = 0;
 
     const content = try read_file(allocator, file_name);
@@ -13,32 +13,23 @@ pub fn main() !void {
     std.debug.print("x length = {d}\n", .{grid[0].len});
     std.debug.print("y length = {d}\n", .{grid.len});
 
-    for (grid, 0..) |line, y| {
-        for (line, 0..) |elem, x| {
-            if (elem == 'X') {
-                if (try check_north(allocator, grid, x, y)) {
-                    answer += 1;
-                }
-                if (try check_north_east(allocator, grid, x, y)) {
-                    answer += 1;
-                }
-                if (try check_east(allocator, line, x)) {
-                    answer += 1;
-                }
-                if (try check_south_east(allocator, grid, x, y)) {
-                    answer += 1;
-                }
-                if (try check_south(allocator, grid, x, y)) {
-                    answer += 1;
-                }
-                if (try check_south_west(allocator, grid, x, y)) {
-                    answer += 1;
-                }
-                if (try check_west(allocator, line, x)) {
-                    answer += 1;
-                }
-                if (try check_north_west(allocator, grid, x, y)) {
-                    answer += 1;
+    for (grid, 0..) |line, y_index| {
+        for (line, 0..) |elem, x_index| {
+            if (elem == 'A') {
+                const x: i32 = @intCast(x_index);
+                const y: i32 = @intCast(y_index);
+                std.debug.print("A found at ({d}, {d})\n", .{ x_index, y_index });
+                if (x - 1 >= 0 and x + 1 < line.len and y - 1 >= 0 or y + 1 < grid.len) {
+                    if (check_cross(grid, x_index, y_index)) {
+                        answer += 1;
+                        std.debug.print("found a cross at ({d}, {d})\n", .{ x_index, y_index });
+                    }
+                    if (check_diagnol(grid, x_index, y_index)) {
+                        answer += 1;
+                        std.debug.print("found a diagonol at ({d}, {d})\n", .{ x_index, y_index });
+                    }
+                } else {
+                    std.debug.print("A is out of bounds\n", .{});
                 }
             }
         }
@@ -68,158 +59,28 @@ fn read_line(allocator: std.mem.Allocator, content: []const u8) ![][]const u8 {
     return lines.toOwnedSlice();
 }
 
-// Check west
-fn check_west(allocator: std.mem.Allocator, data: []const u8, start_x: usize) !bool {
-    const x: i32 = @intCast(start_x);
-    if (x - 3 < 0) {
-        return false;
-    }
-
-    var word = std.ArrayList(u8).init(allocator);
-    defer word.deinit();
-
-    for (0..4) |i| {
-        try word.append(data[start_x - i]);
-    }
-
-    std.debug.print("check west found the word: {s}\n", .{word.items});
-
-    return std.mem.eql(u8, word.items, "XMAS");
+// check diagnol
+fn check_diagnol(data: [][]const u8, x: usize, y: usize) bool {
+    if ((data[y - 1][x - 1] == 'M' and data[y + 1][x - 1] == 'M') and (data[y + 1][x + 1] == 'S' and data[y - 1][x + 1] == 'S')) { // M left S right
+        return true;
+    } else if ((data[y - 1][x - 1] == 'S' and data[y + 1][x - 1] == 'S') and (data[y + 1][x + 1] == 'M' and data[y - 1][x + 1] == 'M')) { // M right S left
+        return true;
+    } else if ((data[y - 1][x - 1] == 'M' and data[y - 1][x + 1] == 'M') and (data[y + 1][x + 1] == 'S' and data[y + 1][x - 1] == 'S')) { // M up S down
+        return true;
+    } else if ((data[y - 1][x - 1] == 'S' and data[y - 1][x + 1] == 'S') and (data[y + 1][x + 1] == 'M' and data[y + 1][x - 1] == 'M')) { // M down S up
+        return true;
+    } else return false;
 }
 
-// Check east
-fn check_east(allocator: std.mem.Allocator, data: []const u8, start_x: usize) !bool {
-    const x: i32 = @intCast(start_x);
-    if (x + 4 > data.len) {
-        return false;
-    }
-
-    var word = std.ArrayList(u8).init(allocator);
-    defer word.deinit();
-
-    for (0..4) |i| {
-        try word.append(data[start_x + i]);
-    }
-
-    std.debug.print("check east found the word: {s}\n", .{word.items});
-
-    return std.mem.eql(u8, word.items, "XMAS");
-}
-
-// check north
-fn check_north(allocator: std.mem.Allocator, data: [][]const u8, start_x: usize, start_y: usize) !bool {
-    const y: i32 = @intCast(start_y);
-    if (y - 3 < 0) {
-        return false;
-    }
-
-    var word = std.ArrayList(u8).init(allocator);
-    defer word.deinit();
-
-    for (0..4) |i| {
-        try word.append(data[start_y - i][start_x]);
-    }
-
-    std.debug.print("check north found the word: {s}\n", .{word.items});
-
-    return std.mem.eql(u8, word.items, "XMAS");
-}
-
-// check south
-fn check_south(allocator: std.mem.Allocator, data: [][]const u8, start_x: usize, start_y: usize) !bool {
-    const y: i32 = @intCast(start_y);
-    if (y + 4 > data.len) {
-        return false;
-    }
-
-    var word = std.ArrayList(u8).init(allocator);
-    defer word.deinit();
-
-    for (0..4) |i| {
-        try word.append(data[start_y + i][start_x]);
-    }
-
-    std.debug.print("check south found the word: {s}\n", .{word.items});
-
-    return std.mem.eql(u8, word.items, "XMAS");
-}
-
-// check north west
-fn check_north_west(allocator: std.mem.Allocator, data: [][]const u8, start_x: usize, start_y: usize) !bool {
-    const x: i32 = @intCast(start_x);
-    const y: i32 = @intCast(start_y);
-    if (x - 3 < 0 or y - 3 < 0) {
-        return false;
-    }
-
-    var word = std.ArrayList(u8).init(allocator);
-    defer word.deinit();
-
-    for (0..4) |i| {
-        try word.append(data[start_y - i][start_x - i]);
-    }
-
-    std.debug.print("check north west found the word: {s}\n", .{word.items});
-
-    return std.mem.eql(u8, word.items, "XMAS");
-}
-
-// check south west
-fn check_south_west(allocator: std.mem.Allocator, data: [][]const u8, start_x: usize, start_y: usize) !bool {
-    const x: i32 = @intCast(start_x);
-    const y: i32 = @intCast(start_y);
-    if (x - 3 < 0 or y + 4 > data.len) {
-        return false;
-    }
-
-    var word = std.ArrayList(u8).init(allocator);
-    defer word.deinit();
-
-    for (0..4) |i| {
-        try word.append(data[start_y + i][start_x - i]);
-    }
-
-    std.debug.print("check south west found the word: {s}\n", .{word.items});
-
-    return std.mem.eql(u8, word.items, "XMAS");
-}
-
-// check north east
-fn check_north_east(allocator: std.mem.Allocator, data: [][]const u8, start_x: usize, start_y: usize) !bool {
-    const x: i32 = @intCast(start_x);
-    const y: i32 = @intCast(start_y);
-    if (x + 4 > data[0].len or y - 3 < 0) {
-        return false;
-    }
-
-    var word = std.ArrayList(u8).init(allocator);
-    defer word.deinit();
-
-    for (0..4) |i| {
-        try word.append(data[start_y - i][start_x + i]);
-    }
-
-    std.debug.print("check north east found the word: {s}\n", .{word.items});
-
-    return std.mem.eql(u8, word.items, "XMAS");
-}
-
-// check south east
-fn check_south_east(allocator: std.mem.Allocator, data: [][]const u8, start_x: usize, start_y: usize) !bool {
-    const x: i32 = @intCast(start_x);
-    const y: i32 = @intCast(start_y);
-    if (x + 4 > data[0].len or y + 4 > data.len) {
-        return false;
-    }
-
-    var word = std.ArrayList(u8).init(allocator);
-    defer word.deinit();
-
-    for (0..4) |i| {
-        try word.append(data[start_y + i][start_x + i]);
-    }
-
-    std.debug.print("check south east found the word: {s}\n", .{word.items});
-
-    return std.mem.eql(u8, word.items, "XMAS");
+// check cross
+fn check_cross(data: [][]const u8, x: usize, y: usize) bool {
+    if ((data[y - 1][x] == 'M' and data[y][x - 1] == 'M') and (data[y + 1][x] == 'S' and data[y][x + 1] == 'S')) { // M left and up S right and down
+        return true;
+    } else if ((data[y - 1][x] == 'M' and data[y][x + 1] == 'M') and (data[y + 1][x] == 'S' and data[y][x - 1] == 'S')) { // M up and right S down and left
+        return true;
+    } else if ((data[y][x + 1] == 'M' and data[y + 1][x] == 'M') and (data[y][x - 1] == 'S' and data[y - 1][x] == 'S')) { // M right and down S left and up
+        return true;
+    } else if ((data[y + 1][x] == 'M' and data[y][x - 1] == 'M') and (data[y - 1][x] == 'S' and data[y][x + 1] == 'S')) { // M down and left S up and right
+        return true;
+    } else return false;
 }
