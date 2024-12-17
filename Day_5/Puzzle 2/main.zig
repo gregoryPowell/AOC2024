@@ -2,12 +2,12 @@ const std = @import("std");
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
-    const file_name = "input.txt";
+    const file_name = "test_input.txt";
     var result: i32 = 0;
 
     const content = try read_file(allocator, file_name);
 
-    var token = std.mem.tokenizeSequence(u8, content, "\n\n");
+    var token = std.mem.tokenizeSequence(u8, content, "\n\r\n");
 
     var rules: [][]i32 = undefined;
     var books: [][]i32 = undefined;
@@ -72,38 +72,38 @@ fn line_to_array(allocator: std.mem.Allocator, data: [][]const u8) ![][]i32 {
 }
 
 fn valid_books(allocator: std.mem.Allocator, rules: [][]i32, books: [][]i32) ![][]i32 {
-    var good_books = std.ArrayList([]i32).init(allocator);
-    defer good_books.deinit();
+    var fixed_books = std.ArrayList([]i32).init(allocator);
+    defer fixed_books.deinit();
 
     for (books) |book| {
-        const book_check = good_book(rules, book);
+        const book_check = bad_book(rules, book);
         if (book_check != null) {
-            try good_books.append(book_check.?);
+            try fixed_books.append(fix_book(rules, book_check.?));
         }
     }
 
-    return try good_books.toOwnedSlice();
+    return try fixed_books.toOwnedSlice();
 }
 
-fn good_book(rules: [][]i32, book: []i32) ?[]i32 {
+fn bad_book(rules: [][]i32, book: []i32) ?[]i32 {
     for (book, 0..) |page, i| {
         for (rules) |rule| {
             for (rule, 0..) |value, j| {
                 if (value == page and j == 0 and i != 0) {
                     if (contains(book[0 .. i - 1], rule[1])) {
                         std.debug.print("book {d} failed due to rule {d}\n", .{ book, rule });
-                        return null;
+                        return book;
                     }
                 } else if (value == page and j == 1 and i != book.len - 1) {
                     if (contains(book[i + 1 ..], rule[0])) {
                         std.debug.print("book {d} failed due to rule {d}\n", .{ book, rule });
-                        return null;
+                        return book;
                     }
                 }
             }
         }
     }
-    return book;
+    return null;
 }
 
 fn contains(array: []i32, check: i32) bool {
@@ -113,4 +113,41 @@ fn contains(array: []i32, check: i32) bool {
         }
     }
     return false;
+}
+
+fn fix_book(rules: [][]i32, book: []i32) []i32 {
+    std.debug.print("fixed book was {d}\n", .{book});
+    for (book, 0..) |page, i| {
+        for (rules) |rule| {
+            for (rule, 0..) |value, j| {
+                if (value == page and j == 0 and i != 0) {
+                    const err_index = contains_at(book[0 .. i - 1], rule[1]);
+                    if (err_index > 0) {
+                        const temp_value = book[err_index];
+                        book[err_index] = book[i];
+                        book[i] = temp_value;
+                    }
+                } else if (value == page and j == 1 and i != book.len - 1) {
+                    const err_index = contains_at(book[i + 1 ..], rule[0]);
+                    if (err_index > 0) {
+                        const temp_value = book[err_index];
+                        book[err_index] = book[i];
+                        book[i] = temp_value;
+                    }
+                }
+            }
+        }
+    }
+
+    std.debug.print("fixed book is now {d}\n", .{book});
+    return book;
+}
+
+fn contains_at(array: []i32, check: i32) usize {
+    for (array, 0..) |elem, i| {
+        if (elem == check) {
+            return i;
+        }
+    }
+    return 0;
 }
