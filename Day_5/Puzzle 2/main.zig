@@ -90,12 +90,12 @@ fn bad_book(rules: [][]i32, book: []i32) ?[]i32 {
         for (rules) |rule| {
             for (rule, 0..) |value, j| {
                 if (value == page and j == 0 and i != 0) {
-                    if (contains(book[0 .. i - 1], rule[1])) {
+                    if (contains(book[0..i], rule[1])) {
                         std.debug.print("book {d} failed due to rule {d}\n", .{ book, rule });
                         return book;
                     }
                 } else if (value == page and j == 1 and i != book.len - 1) {
-                    if (contains(book[i + 1 ..], rule[0])) {
+                    if (contains(book[i..], rule[0])) {
                         std.debug.print("book {d} failed due to rule {d}\n", .{ book, rule });
                         return book;
                     }
@@ -116,23 +116,25 @@ fn contains(array: []i32, check: i32) bool {
 }
 
 fn fix_book(rules: [][]i32, book: []i32) []i32 {
-    std.debug.print("fixed book was {d}\n", .{book});
+    std.debug.print("bad book was  {d}\n", .{book});
     for (book, 0..) |page, i| {
         for (rules) |rule| {
             for (rule, 0..) |value, j| {
                 if (value == page and j == 0 and i != 0) {
-                    const err_index = contains_at(book[0 .. i - 1], rule[1]);
+                    const err_index = contains_at(book[0..i], rule[1]);
                     if (err_index > 0) {
                         const temp_value = book[err_index];
                         book[err_index] = book[i];
                         book[i] = temp_value;
+                        return fix_book(rules, book);
                     }
                 } else if (value == page and j == 1 and i != book.len - 1) {
-                    const err_index = contains_at(book[i + 1 ..], rule[0]);
+                    const err_index = contains_at(book[i..], rule[0]);
                     if (err_index > 0) {
-                        const temp_value = book[err_index];
-                        book[err_index] = book[i];
+                        const temp_value = book[err_index + i];
+                        book[err_index + i] = book[i];
                         book[i] = temp_value;
+                        return fix_book(rules, book);
                     }
                 }
             }
