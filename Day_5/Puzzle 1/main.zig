@@ -2,28 +2,24 @@ const std = @import("std");
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
-    const file_name = "test_input.txt";
+    const file_name = "input.txt";
     var result: i32 = 0;
 
     const content = try read_file(allocator, file_name);
-    std.debug.print("{s}\n", .{content});
 
-    var token = std.mem.tokenizeSequence(u8, content, "\r\n\r\n");
+    var token = std.mem.tokenizeSequence(u8, content, "\n\n");
 
     var rules: [][]i32 = undefined;
     var books: [][]i32 = undefined;
 
     if (token.peek() != null) {
         const rules_by_line = try parse_lines(allocator, token.next().?);
-        std.debug.print("Rules array are: \n{s}\n", .{rules_by_line});
         rules = try line_to_array(allocator, rules_by_line);
-        std.debug.print("Formatted rules array is: \n{d}\n", .{rules});
     }
+
     if (token.peek() != null) {
         const books_by_line = try parse_lines(allocator, token.next().?);
-        std.debug.print("Books arrray are: \n{s}\n", .{books_by_line});
         books = try line_to_array(allocator, books_by_line);
-        std.debug.print("Formatted books array are: \n{d}\n", .{books});
     }
 
     const good_books = try valid_books(allocator, rules, books);
@@ -49,7 +45,7 @@ fn read_file(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {
 fn parse_lines(allocator: std.mem.Allocator, data: []const u8) ![][]const u8 {
     var result_array = std.ArrayList([]const u8).init(allocator);
     defer result_array.deinit();
-    var line = std.mem.tokenizeAny(u8, data, "\r\n");
+    var line = std.mem.tokenizeAny(u8, data, "\n\r");
 
     while (line.peek() != null) {
         result_array.append(line.next().?) catch |err| {
