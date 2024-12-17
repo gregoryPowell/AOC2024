@@ -11,7 +11,7 @@ pub fn main() !void {
     var token = std.mem.tokenizeSequence(u8, content, "\r\n\r\n");
 
     var rules: [][]i32 = undefined;
-    // var books: [][]i32 = undefined;
+    var books: [][]i32 = undefined;
 
     if (token.peek() != null) {
         const rules_by_line = try parse_lines(allocator, token.next().?);
@@ -22,6 +22,8 @@ pub fn main() !void {
     if (token.peek() != null) {
         const books_by_line = try parse_lines(allocator, token.next().?);
         std.debug.print("Books arrray are: \n{s}\n", .{books_by_line});
+        books = try line_to_array(allocator, books_by_line);
+        std.debug.print("Formatted books array are: \n{d}\n", .{books});
     }
 
     std.debug.print("Result is: {d}\n", .{result});
@@ -55,7 +57,7 @@ fn line_to_array(allocator: std.mem.Allocator, data: [][]const u8) ![][]i32 {
     var line_array = std.ArrayList(i32).init(allocator);
     defer line_array.deinit();
     for (data) |line| {
-        var value = std.mem.tokenizeAny(u8, line, "|\n\r");
+        var value = std.mem.tokenizeAny(u8, line, ",|\n\r");
         while (value.peek() != null) {
             try line_array.append(try std.fmt.parseInt(i32, value.next().?, 10));
         }
