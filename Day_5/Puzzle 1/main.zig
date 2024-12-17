@@ -3,7 +3,7 @@ const std = @import("std");
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
     const file_name = "test_input.txt";
-    const result: u32 = 0;
+    var result: i32 = 0;
 
     const content = try read_file(allocator, file_name);
     std.debug.print("{s}\n", .{content});
@@ -28,6 +28,11 @@ pub fn main() !void {
 
     const good_books = try valid_books(allocator, rules, books);
     std.debug.print("The good books are: {d}\n", .{good_books});
+
+    for (good_books) |book| {
+        result += book[((book.len + 1) / 2) - 1];
+        std.debug.print("adding {d} to result\n", .{book[((book.len + 1) / 2) - 1]});
+    }
 
     std.debug.print("Result is: {d}\n", .{result});
 }
