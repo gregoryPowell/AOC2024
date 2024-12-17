@@ -2,7 +2,7 @@ const std = @import("std");
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
-    const file_name = "test_input.txt";
+    const file_name = "input.txt";
     var result: i32 = 0;
 
     const content = try read_file(allocator, file_name);
