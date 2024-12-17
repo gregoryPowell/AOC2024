@@ -26,6 +26,9 @@ pub fn main() !void {
         std.debug.print("Formatted books array are: \n{d}\n", .{books});
     }
 
+    const good_books = try valid_books(allocator, rules, books);
+    std.debug.print("The good books are: {d}\n", .{good_books});
+
     std.debug.print("Result is: {d}\n", .{result});
 }
 
@@ -64,5 +67,49 @@ fn line_to_array(allocator: std.mem.Allocator, data: [][]const u8) ![][]i32 {
         try result_array.append(try line_array.toOwnedSlice());
     }
 
-    return result_array.toOwnedSlice();
+    return try result_array.toOwnedSlice();
+}
+
+fn valid_books(allocator: std.mem.Allocator, rules: [][]i32, books: [][]i32) ![][]i32 {
+    var good_books = std.ArrayList([]i32).init(allocator);
+    defer good_books.deinit();
+
+    for (books) |book| {
+        const book_check = good_book(rules, book);
+        if (book_check != null) {
+            try good_books.append(book_check.?);
+        }
+    }
+
+    return try good_books.toOwnedSlice();
+}
+
+fn good_book(rules: [][]i32, book: []i32) ?[]i32 {
+    for (book, 0..) |page, i| {
+        for (rules) |rule| {
+            for (rule, 0..) |value, j| {
+                if (value == page and j == 0 and i != 0) {
+                    if (contains(book[0 .. i - 1], rule[1])) {
+                        std.debug.print("book {d} failed due to rule {d}\n", .{ book, rule });
+                        return null;
+                    }
+                } else if (value == page and j == 1 and i != book.len - 1) {
+                    if (contains(book[i + 1 ..], rule[0])) {
+                        std.debug.print("book {d} failed due to rule {d}\n", .{ book, rule });
+                        return null;
+                    }
+                }
+            }
+        }
+    }
+    return book;
+}
+
+fn contains(array: []i32, check: i32) bool {
+    for (array) |elem| {
+        if (elem == check) {
+            return true;
+        }
+    }
+    return false;
 }
