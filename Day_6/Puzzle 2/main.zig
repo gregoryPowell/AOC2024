@@ -3,19 +3,37 @@ const err = error.OutOfBounds;
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
-    const file_name = "input.txt";
+    const file_name = "test_input.txt";
+    var result: u16 = 0;
 
     const content = try read_file(allocator, file_name);
-    var board = try build_board(allocator, content);
+    var original_board = try build_board(allocator, content);
 
-    while (contains_gaurd(board)) {
-        print_board(board);
-        board = new_board(board) catch remove_gaurd(board);
+    for (original_board, 0..) |line, i| {
+        for (line, 0..) |elem, j| {
+            if (elem == '.') {
+                var counter: u16 = 0;
+                var board = try copy_board(allocator, original_board);
+                board[i][j] = 'O';
+                var old_spaces_count: u16 = 0;
+                while (contains_gaurd(board)) {
+                    board = new_board(board) catch remove_gaurd(board);
+                    if (count_spaces(board) == old_spaces_count) {
+                        counter += 1;
+                    } else if (counter > 50) {
+                        result += 1;
+                        break;
+                    }
+                    {
+                        old_spaces_count = count_spaces(board);
+                    }
+                }
+                print_board(board);
+            }
+            original_board = try build_board(allocator, content);
+        }
     }
 
-    print_board(board);
-
-    const result = count_spaces(board);
     std.debug.print("Result: {d}\n", .{result});
 }
 
@@ -56,14 +74,14 @@ fn new_board(board: [][]u8) ![][]u8 {
         for (line, 0..) |elem, j| {
             switch (elem) {
                 '<' => {
-                    std.debug.print("moving left...\n", .{});
+                    // std.debug.print("moving left...\n", .{});
                     if (j == 0) {
-                        std.debug.print("Game Over!!!\n", .{});
+                        // std.debug.print("Game Over!!!\n", .{});
                         return remove_gaurd(board);
                     } else {
                         const valid = try valid_move(board, j - 1, i);
                         if (valid) {
-                            std.debug.print("good to move...left\n", .{});
+                            // std.debug.print("good to move...left\n", .{});
                             return move_gaurd(board, j, i, j - 1, i);
                         } else {
                             return rotate_gaurd(board, j, i);
@@ -71,14 +89,14 @@ fn new_board(board: [][]u8) ![][]u8 {
                     }
                 },
                 '^' => {
-                    std.debug.print("moving up...\n", .{});
+                    // std.debug.print("moving up...\n", .{});
                     if (i == 0) {
-                        std.debug.print("Game Over!!!\n", .{});
+                        // std.debug.print("Game Over!!!\n", .{});
                         return remove_gaurd(board);
                     } else {
                         const valid = try valid_move(board, j, i - 1);
                         if (valid) {
-                            std.debug.print("good to move...up\n", .{});
+                            // std.debug.print("good to move...up\n", .{});
                             return move_gaurd(board, j, i, j, i - 1);
                         } else {
                             return rotate_gaurd(board, j, i);
@@ -86,20 +104,20 @@ fn new_board(board: [][]u8) ![][]u8 {
                     }
                 },
                 '>' => {
-                    std.debug.print("moving right...\n", .{});
+                    // std.debug.print("moving right...\n", .{});
                     const valid = try valid_move(board, j + 1, i);
                     if (valid) {
-                        std.debug.print("good to move...right\n", .{});
+                        // std.debug.print("good to move...right\n", .{});
                         return move_gaurd(board, j, i, j + 1, i);
                     } else {
                         return rotate_gaurd(board, j, i);
                     }
                 },
                 'v' => {
-                    std.debug.print("moving down...\n", .{});
+                    // std.debug.print("moving down...\n", .{});
                     const valid = try valid_move(board, j, i + 1);
                     if (valid) {
-                        std.debug.print("good to move...down\n", .{});
+                        // std.debug.print("good to move...down\n", .{});
                         return move_gaurd(board, j, i, j, i + 1);
                     } else {
                         return rotate_gaurd(board, j, i);
@@ -171,4 +189,11 @@ fn count_spaces(board: [][]u8) u16 {
     }
 
     return count;
+}
+
+fn copy_board(allocator: std.mem.Allocator, board: [][]u8) ![][]u8 {
+    const copied_board = try allocator.alloc([]u8, board.len);
+    @memcpy(copied_board, board);
+
+    return copied_board;
 }
