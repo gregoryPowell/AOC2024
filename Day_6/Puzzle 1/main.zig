@@ -3,7 +3,7 @@ const err = error.OutOfBounds;
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
-    const file_name = "test_input.txt";
+    const file_name = "input.txt";
 
     const content = try read_file(allocator, file_name);
     var board = try build_board(allocator, content);
