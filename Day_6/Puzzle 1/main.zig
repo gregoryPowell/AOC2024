@@ -4,15 +4,18 @@ const err = error.OutOfBounds;
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
     const file_name = "test_input.txt";
-    const result: u32 = 0;
 
     const content = try read_file(allocator, file_name);
     var board = try build_board(allocator, content);
-    print_board(board);
-    for (0..6) |_| {
-        board = try new_board(board);
+
+    while (contains_gaurd(board)) {
+        print_board(board);
+        board = new_board(board) catch remove_gaurd(board);
     }
 
+    print_board(board);
+
+    const result = count_spaces(board);
     std.debug.print("Result: {d}\n", .{result});
 }
 
@@ -49,7 +52,6 @@ fn print_board(board: [][]u8) void {
 }
 
 fn new_board(board: [][]u8) ![][]u8 {
-    var return_board: [][]u8 = undefined;
     for (board, 0..) |line, i| {
         for (line, 0..) |elem, j| {
             switch (elem) {
@@ -57,13 +59,14 @@ fn new_board(board: [][]u8) ![][]u8 {
                     std.debug.print("moving left...\n", .{});
                     if (j == 0) {
                         std.debug.print("Game Over!!!\n", .{});
+                        return remove_gaurd(board);
                     } else {
                         const valid = try valid_move(board, j - 1, i);
                         if (valid) {
-                            std.debug.print("good to move...left", .{});
-                            return_board = move_gaurd(board, j, i, j - 1, i);
+                            std.debug.print("good to move...left\n", .{});
+                            return move_gaurd(board, j, i, j - 1, i);
                         } else {
-                            return_board = rotate_gaurd(board, j, i);
+                            return rotate_gaurd(board, j, i);
                         }
                     }
                 },
@@ -71,13 +74,14 @@ fn new_board(board: [][]u8) ![][]u8 {
                     std.debug.print("moving up...\n", .{});
                     if (i == 0) {
                         std.debug.print("Game Over!!!\n", .{});
+                        return remove_gaurd(board);
                     } else {
                         const valid = try valid_move(board, j, i - 1);
                         if (valid) {
                             std.debug.print("good to move...up\n", .{});
-                            return_board = move_gaurd(board, j, i, j, i - 1);
+                            return move_gaurd(board, j, i, j, i - 1);
                         } else {
-                            return_board = rotate_gaurd(board, j, i);
+                            return rotate_gaurd(board, j, i);
                         }
                     }
                 },
@@ -86,27 +90,26 @@ fn new_board(board: [][]u8) ![][]u8 {
                     const valid = try valid_move(board, j + 1, i);
                     if (valid) {
                         std.debug.print("good to move...right\n", .{});
-                        return_board = move_gaurd(board, j, i, j + 1, i);
+                        return move_gaurd(board, j, i, j + 1, i);
                     } else {
-                        return_board = rotate_gaurd(board, j, i);
+                        return rotate_gaurd(board, j, i);
                     }
                 },
                 'v' => {
-                    std.debug.print("moving down...", .{});
+                    std.debug.print("moving down...\n", .{});
                     const valid = try valid_move(board, j, i + 1);
                     if (valid) {
                         std.debug.print("good to move...down\n", .{});
-                        return_board = move_gaurd(board, j, i, j, i + 1);
+                        return move_gaurd(board, j, i, j, i + 1);
                     } else {
-                        return_board = rotate_gaurd(board, j, i);
+                        return rotate_gaurd(board, j, i);
                     }
                 },
                 else => {},
             }
         }
     }
-    print_board(return_board);
-    return return_board;
+    return board;
 }
 
 fn valid_move(board: [][]u8, x: usize, y: usize) !bool {
@@ -133,4 +136,39 @@ fn rotate_gaurd(board: [][]u8, x: usize, y: usize) [][]u8 {
         else => {},
     }
     return board;
+}
+
+fn remove_gaurd(board: [][]u8) [][]u8 {
+    for (board, 0..) |line, i| {
+        for (line, 0..) |elem, j| {
+            if (elem == '<' or elem == '^' or elem == '>' or elem == 'v') {
+                board[i][j] = 'X';
+            }
+        }
+    }
+    return board;
+}
+
+fn contains_gaurd(board: [][]u8) bool {
+    for (board) |line| {
+        for (line) |elem| {
+            if (elem == '<' or elem == '^' or elem == '>' or elem == 'v') {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+fn count_spaces(board: [][]u8) u16 {
+    var count: u16 = 0;
+    for (board) |line| {
+        for (line) |elem| {
+            if (elem == 'X') {
+                count += 1;
+            }
+        }
+    }
+
+    return count;
 }
