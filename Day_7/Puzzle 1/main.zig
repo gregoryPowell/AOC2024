@@ -2,6 +2,7 @@ const std = @import("std");
 const INPUT_BUFFER_SIZE = 1048576;
 
 pub fn main() !void {
+    var final_sum: i32 = 0;
     const input_path = "test_input.txt";
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
@@ -13,8 +14,14 @@ pub fn main() !void {
     while (line.peek() != null) {
         var equation: Equation = try .init(allocator, line.next().?);
         defer equation.deinit();
+
         equation.printEquation();
+        if (equation.solvable()) {
+            final_sum += equation.answer;
+        }
     }
+
+    std.debug.print("final sum is {d}\n", .{final_sum});
 }
 
 const Equation = struct {
@@ -49,5 +56,22 @@ const Equation = struct {
             std.debug.print(" {d}", .{operand});
         }
         std.debug.print("\n", .{});
+    }
+
+    pub fn solvable(self: *Self) bool {
+        var temp_sum: i32 = 1;
+        for (self.operands.items) |operand| {
+            temp_sum *= operand;
+        }
+        if (temp_sum < self.answer) return false else if (temp_sum == self.answer) return true;
+
+        temp_sum = 0;
+        for (self.operands.items) |operand| {
+            temp_sum += operand;
+        }
+        if (temp_sum > self.answer) return false else if (temp_sum == self.answer) return true;
+
+        std.debug.print("answer possible...\n", .{});
+        return true;
     }
 };
