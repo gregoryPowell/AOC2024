@@ -23,11 +23,32 @@ pub fn main() !void {
     var map = map_init;
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
+    var result: u16 = 0;
 
     const start: usize = map.getChar('^').?;
-    var guard: Guard = try .init(.N, start, '^', allocator);
-    try guard.patrol(&map);
-    std.debug.print("locations visited: {d}\n", .{guard.visited.count()});
+    var first_guard: Guard = try .init(.N, start, '^', allocator);
+    try first_guard.patrol(&map);
+    // const max_locations = first_guard.visited.count();
+
+    for (map_init.grid_string, 0..) |elem, i| {
+        if (elem == '.') {
+            var temp_map = map_init;
+            temp_map.grid_string[i] = '#';
+            var temp_gaurd: Guard = try .init(.N, start, '^', allocator);
+            // std.debug.print("{s}\n", .{temp_map.grid_string});
+            try temp_gaurd.patrol(&temp_map);
+
+            if (temp_gaurd.visited.get(temp_gaurd.location).? > 4) {
+                std.debug.print("Loop!!!\n", .{});
+                std.debug.print("{s}\n", .{temp_map.grid_string});
+                result += 1;
+            }
+            // std.debug.print("{s}\n", .{temp_map.grid_string});
+            // std.debug.print("locations visited: {d}\n", .{temp_gaurd.visited.count()});
+        }
+    }
+
+    std.debug.print("result is {d}\n", .{result});
 }
 
 const CharMap = struct {
@@ -43,11 +64,11 @@ const CharMap = struct {
         var file = try std.fs.cwd().openFile(input_path, .{});
         defer file.close();
         self.grid_string_len = try file.read(&self.grid_string);
-        std.debug.print("file length is {d}\n", .{self.grid_string_len});
+        // std.debug.print("file length is {d}\n", .{self.grid_string_len});
         self.width = std.mem.indexOf(u8, &self.grid_string, "\n").? + 1;
-        std.debug.print("width of each line is {d}\n", .{self.width});
+        // std.debug.print("width of each line is {d}\n", .{self.width});
         self.height = self.grid_string_len / self.width + 1;
-        std.debug.print("height is {d}\n", .{self.height});
+        // std.debug.print("height is {d}\n", .{self.height});
         return self;
     }
 
@@ -87,7 +108,7 @@ const CharMap = struct {
                 if (xy.y < self.height - 1) {
                     xy.y += 1;
                 } else {
-                    std.debug.print("failed because location ({d}, {d}) is less than height {d}\n", .{ xy.x, xy.y, self.height });
+                    // std.debug.print("failed because location ({d}, {d}) is less than height {d}\n", .{ xy.x, xy.y, self.height });
                     return null;
                 }
             },
@@ -145,15 +166,12 @@ const Guard = struct {
 
     pub fn patrol(self: *Self, map: *CharMap) !void {
         while (try self.step(map)) {
-            std.debug.print("{s}\n", .{map.grid_string});
+            // std.debug.print("{s}\n", .{map.grid_string});
         }
     }
 
     pub fn step(self: *Self, map: *CharMap) !bool {
-        const next_i: usize = if (map.checkDirection(self.location, self.direction)) |i| i else {
-            std.debug.print("failed map checkDirection at location: {d} and direction {any}\n", .{ self.location, self.direction });
-            return false;
-        };
+        const next_i: usize = if (map.checkDirection(self.location, self.direction)) |i| i else return false;
 
         if (map.grid_string[next_i] == '#') {
             self.turn();
@@ -165,76 +183,13 @@ const Guard = struct {
             if (!result.found_existing) {
                 result.value_ptr.* = 0;
             }
-            result.value_ptr.* += 0;
+            result.value_ptr.* += 1;
+            if (self.visited.get(self.location).? > 4) {
+                // std.debug.print("infinte loop found\n", .{});
+                return false;
+            }
             map.grid_string[self.location] = self.char;
         }
         return true;
-    }
-};
-
-pub const InputIterator = struct {
-    _buffer: [1048576]u8 = undefined,
-    _bufLen: usize = 0,
-    lines: std.mem.TokenIterator(u8, .any) = undefined,
-    split: std.mem.SplitIterator(u8, .any) = undefined,
-
-    const Self = @This();
-
-    pub fn init(path: []const u8) !Self {
-        var self = Self{};
-        for (self._buffer, 0..) |_, i| {
-            self._buffer[i] = '\x00';
-        }
-        var file = try std.fs.cwd().openFile(path, .{});
-        defer file.close();
-        self._bufLen = try file.read(&self._buffer);
-        self.tokenizeLines();
-        return self;
-    }
-
-    pub fn init_(path: []const u8) !Self {
-        var self = Self{};
-        for (self._buffer, 0..) |_, i| {
-            self._buffer[i] = '\x00';
-        }
-        var file = try std.fs.cwd().openFile(path, .{});
-        defer file.close();
-        self._bufLen = try file.read(&self._buffer);
-        _ = self.splitLines();
-        return self;
-    }
-
-    pub fn tokenizeLines(self: *Self) void {
-        self.lines = std.mem.tokenizeAny(u8, &self._buffer, "\n\x00");
-    }
-
-    pub fn splitLines(self: *Self) void {
-        self.split = std.mem.splitAny(u8, &self._buffer, "\n\x00");
-    }
-
-    pub fn next(self: *Self) ?[]const u8 {
-        if (@intFromPtr(&self.lines.buffer[0]) != @intFromPtr(&self._buffer[0])) self.lines.buffer = self._buffer[0..];
-        if (self.lines.index >= self._bufLen - 1) {
-            return null;
-        }
-        const result = self.lines.peek() orelse {
-            return null;
-        };
-        if (result.len == 0) return null;
-
-        return self.lines.next();
-    }
-
-    pub fn next_s(self: *Self) ?[]const u8 {
-        if (@intFromPtr(&self.split.buffer[0]) != @intFromPtr(&self._buffer[0])) self.split.buffer = self._buffer[0..];
-        if (self.split.index.? >= self._bufLen - 1) {
-            return null;
-        }
-
-        return self.split.next();
-    }
-
-    pub fn reset(self: *Self) void {
-        self.lines.reset();
     }
 };
