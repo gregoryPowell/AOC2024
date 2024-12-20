@@ -27,6 +27,7 @@ pub fn main() !void {
 const Node = struct {
     result: i64 = undefined,
     left: ?*Node = undefined,
+    center: ?*Node = undefined,
     right: ?*Node = undefined,
 
     pub fn init(allocator: std.mem.Allocator, value: i64) *Node {
@@ -34,6 +35,7 @@ const Node = struct {
         newNode.* = Node{
             .result = value,
             .left = null,
+            .center = null,
             .right = null,
         };
         return newNode;
@@ -50,26 +52,28 @@ const Node = struct {
 
         if (index + 1 < operands.len) {
             const leftValue = root.?.result + operands[index + 1];
+            const centerValue = Node.concat(allocator, root.?.result, operands[index + 1]) catch unreachable;
             const rightValue = root.?.result * operands[index + 1];
 
             root.?.left = Node.createTree(allocator, operands, index + 1, Node.init(allocator, leftValue));
+            root.?.center = Node.createTree(allocator, operands, index + 1, Node.init(allocator, centerValue));
             root.?.right = Node.createTree(allocator, operands, index + 1, Node.init(allocator, rightValue));
-
-            if (root.?.left != null) root.?.left.?.result = leftValue;
-            if (root.?.right != null) root.?.right.?.result = rightValue;
         }
 
         return root;
     }
 
     pub fn findLeafNodes(self: *Node, results: *std.ArrayList(i64)) !void {
-        if (self.left == null or self.right == null) {
+        if (self.left == null and self.center == null and self.right == null) {
             try results.append(self.result);
             return;
         }
 
         if (self.left != null) {
             try self.left.?.findLeafNodes(results);
+        }
+        if (self.center != null) {
+            try self.center.?.findLeafNodes(results);
         }
         if (self.right != null) {
             try self.right.?.findLeafNodes(results);
@@ -80,10 +84,24 @@ const Node = struct {
         if (self.left != null) {
             self.left.?.traverseInOrder();
         }
+        if (self.center != null) {
+            self.center.?.traverseInOrder();
+        }
         std.debug.print("{d} ", .{self.result});
         if (self.right != null) {
             self.right.?.traverseInOrder();
         }
+    }
+
+    fn concat(allocator: std.mem.Allocator, num1: i64, num2: i64) !i64 {
+        const num1_string = try std.fmt.allocPrint(allocator, "{d}", .{num1});
+        defer allocator.free(num1_string);
+        const num2_string = try std.fmt.allocPrint(allocator, "{d}", .{num2});
+        defer allocator.free(num2_string);
+        const new_num_string = try std.mem.concat(allocator, u8, &[_][]u8{ num1_string, num2_string });
+        defer allocator.free(new_num_string);
+
+        return try std.fmt.parseInt(i64, new_num_string, 10);
     }
 };
 
