@@ -1,7 +1,7 @@
 const std = @import("std");
 
-const MAP_MAX_SIZE = 100;
-const input_path = "test_input.txt";
+const MAP_MAX_SIZE = 1000;
+const input_path = "input.txt";
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -51,7 +51,7 @@ const Map = struct {
                 new_map.antinode_map[index][i] = '.';
             }
         }
-        new_map.height = index;
+        new_map.height = index - 1;
 
         return new_map;
     }
