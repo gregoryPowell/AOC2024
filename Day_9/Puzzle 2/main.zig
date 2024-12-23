@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const file_path = "test_input.txt";
+const file_path = "input.txt";
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -76,7 +76,7 @@ pub fn sort_files(file_sys: *[]?u64) !void {
                             files[k - null_counter + 1] = new_elem;
                             files[j + null_counter] = null;
                         }
-                        std.debug.print("{any}\n", .{files});
+                        // std.debug.print("{any}\n", .{files});
                     }
                     break;
                 }
