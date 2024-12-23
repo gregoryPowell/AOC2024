@@ -42,6 +42,14 @@ pub fn main() !void {
             std.debug.print("{s}\n", .{file_system});
         }
     }
+
+    var checksum: u64 = 0;
+    for (file_system, 0..) |elem, i| {
+        if (elem != '.') {
+            checksum += ((elem - 0x30) * i);
+        }
+    }
+    std.debug.print("checksum is {d}\n", .{checksum});
 }
 
 const Disk = struct {
