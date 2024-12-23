@@ -9,11 +9,11 @@ pub fn main() !void {
     var file = try std.fs.cwd().openFile(file_path, .{});
     defer file.close();
     const content = try file.readToEndAlloc(allocator, try file.getEndPos());
-    std.debug.print("{s}\n", .{content});
+    std.debug.print("{s}", .{content});
 
     var index: usize = 0;
-    var file_system = std.ArrayList(u8).init(allocator);
-    defer file_system.deinit();
+    var original_file_system = std.ArrayList(u8).init(allocator);
+    defer original_file_system.deinit();
 
     while (index < content.len) : (index += 2) {
         var free_space: u8 = 0x30;
@@ -23,10 +23,25 @@ pub fn main() !void {
         var new_disk = try Disk.init(allocator, index / 2, content[index], free_space);
         defer new_disk.deinit();
 
-        try file_system.appendSlice(try new_disk.file_array.toOwnedSlice());
+        try original_file_system.appendSlice(try new_disk.file_array.toOwnedSlice());
     }
+    std.debug.print("{s}\n", .{original_file_system.items});
+    var file_system = try original_file_system.toOwnedSlice();
 
-    std.debug.print("{s}\n", .{file_system.items});
+    for (file_system, 0..) |elem, i| {
+        if (elem == '.') {
+            var j = file_system.len - 1;
+            while (j >= i) : (j -= 1) {
+                if (file_system[j] != '.') {
+                    file_system[i] = file_system[j];
+                    file_system[j] = '.';
+                    break;
+                }
+            }
+            if (j <= i) break;
+            std.debug.print("{s}\n", .{file_system});
+        }
+    }
 }
 
 const Disk = struct {
